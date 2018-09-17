@@ -1,13 +1,13 @@
 CC=gcc
 CFLAGS=-Wall
 EXECUTABLE=cbhe
-SOURCES=$(shell find src -name '*.cpp')
-OBJS=$(patsubst src/%.cpp, bin/%.o, $(SOURCES))
+SOURCES=$(shell find src -name '*.c')
+OBJS=$(patsubst src/%.c, bin/%.o, $(SOURCES))
 
 $(EXECUTABLE) : $(OBJS)
 	$(CC) $(CFLAGS) $(OBJS) -o $@ 
 
-bin/%.o: src/%.cpp
+bin/%.o: src/%.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
