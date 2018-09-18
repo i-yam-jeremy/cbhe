@@ -4,7 +4,7 @@
 #include <stdlib.h>
 
 /*
-	The number of possible values that can fit inside a char data type
+	The number of possible values that can fit inside a unsigned char data type
 */
 #define CHAR_VALUE_COUNT 256
 
@@ -49,6 +49,7 @@ void CBHE_free_huff_trees(CBHEHuffmanTree *trees, int depth) {
 }
 
 typedef struct {
+	int exists;
 	long value;
 	int bit_count;
 } CBHEEncoding;
@@ -58,6 +59,29 @@ CBHEEncoding CBHE_make_encoding(long value, int bit_count) {
 	encoding.value = value;
 	encoding.bit_count = bit_count;
 	return encoding;
+}
+
+struct cbhe_bitstream {
+	FILE *file;
+	unsigned char buffer;
+	int buffer_bit_count;
+};
+
+typedef struct cbhe_bitstream* CBHEBitstream;
+
+CBHEBitstream CBHE_new_bitstream(FILE *file) {
+	CBHEBitstream bs = (CBHEBitstream) malloc(sizeof(struct cbhe_bitstream));
+	bs->file = file;
+	bs->buffer = 0;
+	bs->buffer_bit_count = 0;
+	return bs;
+}
+
+void CBHE_flush_bitstream(CBHEBitstream bs) {
+	unsigned char b = bs->buffer << (8 - bs->buffer_bit_count); // align so first bit is at top (most significant) end of byte
+	fwrite(&b, sizeof(unsigned char), 1, bs->file);
+	bs->buffer = 0;
+	bs->buffer_bit_count = 0;
 }
 
 /*
@@ -76,11 +100,11 @@ long CBHE_pow(int n, int m) {
 
 /*
 	Pushes the given value to the end of the buffer and shifts all other elements left one
-	@param buffer - the context buffer of characters
+	@param buffer - the context buffer of unsigned characters
 	@param depth - the depth of the context
-	@param c - the character to be pushed
+	@param c - the unsigned character to be pushed
 */
-void CBHE_push_buffer(char *buffer, int depth, char c) {
+void CBHE_push_buffer(unsigned char *buffer, int depth, unsigned char c) {
 	for (int i = 0; i < depth-1; i++) {
 		buffer[i] = buffer[i+1];
 	}
@@ -88,13 +112,13 @@ void CBHE_push_buffer(char *buffer, int depth, char c) {
 }
 
 /*
-	Returns the index in the context counts array from the given context buffer
-	@return - the index in the counts array
+	Returns the index in a context array (counts array or encodings array) from the given context buffer
+	@return - the index in a context array (counts array or encodings array)
 */
-long CBHE_get_context_count_index(char *buffer, int depth) {
+long CBHE_get_context_index(unsigned char *buffer, int depth) {
 	long index = 0;
 	for (int i = 0; i < depth; i++) {
-		index += buffer[i] << (8*sizeof(char));
+		index += buffer[i] << (8*sizeof(unsigned char));
 	}
 	return index;
 }
@@ -105,8 +129,8 @@ long CBHE_get_context_count_index(char *buffer, int depth) {
 	@param buffer - the context buffer
 	@param depth - the depth of the context
 */
-void CBHE_increment_count(int *counts, char *buffer, int depth) {
-	long index = CBHE_get_context_count_index(buffer, depth);
+void CBHE_increment_count(int *counts, unsigned char *buffer, int depth) {
+	long index = CBHE_get_context_index(buffer, depth);
 	counts[index]++;
 }
 
@@ -115,13 +139,13 @@ void CBHE_increment_count(int *counts, char *buffer, int depth) {
 	@param input - the input file
 	@param depth - the depth of the context
 	@return - a N-dimensional array (of dimesion equal to the specified depth) indexed by
-		characters in the context buffer
+		unsigned characters in the context buffer
 */
 int* CBHE_get_counts(FILE *input, int depth) {
-	char *buffer = (char*) calloc(depth, sizeof(char));
+	unsigned char *buffer = (unsigned char*) calloc(depth, sizeof(unsigned char));
 	int *counts = (int*) calloc(CBHE_pow(CHAR_VALUE_COUNT, depth), sizeof(int));
 	
-	char c;
+	int c;
 	while ((c = fgetc(input)) != -1) {
 		CBHE_push_buffer(buffer, depth, c);
 		CBHE_increment_count(counts, buffer, depth);
@@ -145,7 +169,7 @@ CBHEHuffmanTree CBHE_generate_tree(int *counts, int depth, long tree_index) {
 	}
 
 	if (tree_count == 0) {
-		return NULL; // No characters occurred with the given context
+		return NULL; // No unsigned characters occurred with the given context
 	}
 
 	while (tree_count > 1) {
@@ -187,13 +211,66 @@ CBHEHuffmanTree* CBHE_generate_trees(int *counts, int depth) {
 	return trees;
 }
 
-CBHEEncoding* CBHE_generate_encodings(CBHEHuffmanTree *trees, int depth) {
-	return NULL; // TODO
+void CBHE_flatten_tree_helper(CBHEEncoding *encodings, CBHEHuffmanTree tree, int tree_index, long bit_pattern, int bit_count) {
+	if (tree->left == NULL && tree->right == NULL)	{
+		long encoding_index = (tree_index << 8) + tree->c;
+		encodings[encoding_index].exists = 1;
+		encodings[encoding_index].value = bit_pattern;
+		encodings[encoding_index].bit_count = bit_count;
+		printf("Wrote encoding\n");
+	}
+	else {
+		CBHE_flatten_tree_helper(encodings, tree->left, tree_index, (bit_pattern << 1) + 0, bit_count+1);
+		CBHE_flatten_tree_helper(encodings, tree->left, tree_index, (bit_pattern << 1) + 1, bit_count+1);
+	}
 }
 
+void CBHE_flatten_tree(CBHEEncoding *encodings, CBHEHuffmanTree *trees, int tree_index) {
+	CBHE_flatten_tree_helper(encodings, trees[tree_index], tree_index, 0, 0);
+}
 
-void CBHE_encode(CBHEEncoding *encodings, FILE *input, FILE *output) {
-	//TODO write CBHE_write_encoding(output, CBHEEncoding encoding)
+CBHEEncoding* CBHE_generate_encodings(CBHEHuffmanTree *trees, int depth) {
+	CBHEEncoding *encodings = (CBHEEncoding*) calloc(CBHE_pow(CHAR_VALUE_COUNT, depth), sizeof(CBHEEncoding));
+
+	for (long tree_index = 0; tree_index < CBHE_pow(CHAR_VALUE_COUNT, depth-1); tree_index++) {
+		if (trees[tree_index] != NULL) {
+			CBHE_flatten_tree(encodings, trees, tree_index);
+		}
+	}
+
+	return encodings;
+}
+
+void CBHE_write_bit(CBHEBitstream bs, int bit) {
+	bs->buffer = (bs->buffer << 1) + bit;
+	bs->buffer_bit_count++;
+
+	if (bs->buffer_bit_count == 8) {
+		fwrite(&bs->buffer, sizeof(unsigned char), 1, bs->file);
+		bs->buffer = 0;
+		bs->buffer_bit_count = 0;
+	}
+}
+
+void CBHE_write_encoding(CBHEBitstream output_bitstream, CBHEEncoding encoding) {
+	for (int i = encoding.bit_count-1; i >= 0; i--) {
+		CBHE_write_bit(output_bitstream, (encoding.value >> i) & 0x1);
+	}
+}
+
+void CBHE_encode(CBHEEncoding *encodings, int depth, FILE *input, FILE *output) {
+	unsigned char *buffer = (unsigned char*) calloc(depth, sizeof(unsigned char));
+	CBHEBitstream output_bitstream = CBHE_new_bitstream(output);
+	
+	int c;
+	while ((c = fgetc(input)) != -1) {
+		CBHE_push_buffer(buffer, depth, c);
+		long encoding_index = CBHE_get_context_index(buffer, depth);
+		CBHE_write_encoding(output_bitstream, encodings[encoding_index]);
+	}
+
+	CBHE_flush_bitstream(output_bitstream);
+	free(output_bitstream);
 }
 
 /*
@@ -211,11 +288,12 @@ void CBHE_compress(char *input_file_path, char *output_file_path, int depth) {
 
 	CBHEHuffmanTree *trees = CBHE_generate_trees(counts, depth);
 
+
 	CBHEEncoding *encodings = CBHE_generate_encodings(trees, depth);
 	CBHE_free_huff_trees(trees, depth);
 
 	rewind(input);
-	CBHE_encode(encodings, input, output);
+	CBHE_encode(encodings, depth, input, output);
 	
 	free(encodings);
 
