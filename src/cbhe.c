@@ -172,6 +172,8 @@ CBHEHuffmanTree CBHE_generate_tree(int *counts, int depth, long tree_index) {
 		return NULL; // No unsigned characters occurred with the given context
 	}
 
+	printf("Tree Count: %d\n", tree_count);
+
 	while (tree_count > 1) {
 		int smallest_node_index = -1;
 		int second_smallest_node_index = -1;
@@ -187,19 +189,27 @@ CBHEHuffmanTree CBHE_generate_tree(int *counts, int depth, long tree_index) {
 			else if (second_smallest_node_index == -1 || trees[i]->count < trees[second_smallest_node_index]->count) {
 				second_smallest_node_index = i;
 			}
+		}
 
-			CBHEHuffmanTree new_tree = CBHE_new_huff_tree(
-						0,
-						trees[smallest_node_index]->count + trees[second_smallest_node_index]->count,
-						trees[smallest_node_index],
-						trees[second_smallest_node_index]);
-			
-			trees[smallest_node_index] = new_tree; // overwrite smallest node by setting new tree to smallest node
-			trees[second_smallest_node_index] = NULL; // clear second smallest node
+		CBHEHuffmanTree new_tree = CBHE_new_huff_tree(
+					0,
+					trees[smallest_node_index]->count + trees[second_smallest_node_index]->count,
+					trees[smallest_node_index],
+					trees[second_smallest_node_index]);
+		
+		trees[smallest_node_index] = new_tree; // overwrite smallest node by setting new tree to smallest node
+		trees[second_smallest_node_index] = NULL; // clear second smallest node
+		tree_count--;
+	}
+
+	
+	for (int i = 0; i < CHAR_VALUE_COUNT; i++) { // search trees for the last remaining one (the non-NULL one)
+		if (trees[i] != NULL) { 
+			return trees[i];
 		}
 	}
 
-	return trees[0];
+	return NULL; // should never be reached
 }
 
 CBHEHuffmanTree* CBHE_generate_trees(int *counts, int depth) {
@@ -217,7 +227,7 @@ void CBHE_flatten_tree_helper(CBHEEncoding *encodings, CBHEHuffmanTree tree, int
 		encodings[encoding_index].exists = 1;
 		encodings[encoding_index].value = bit_pattern;
 		encodings[encoding_index].bit_count = bit_count;
-		printf("Wrote encoding\n");
+		printf("%c, %d, %d\n", tree->c, bit_pattern, bit_count);
 	}
 	else {
 		CBHE_flatten_tree_helper(encodings, tree->left, tree_index, (bit_pattern << 1) + 0, bit_count+1);
