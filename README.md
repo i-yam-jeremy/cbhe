@@ -8,4 +8,4 @@ Allows for greater compression of the data because some characters are more likl
 Since many Huffman trees are generated, the dictionary becomes very large. This makes it only useful for extremely large text files.
 
 ## Overall Review
-This algorithm does not have much practical use, however I enjoyed created my own compression algorithm and have learned some so in the future I can make a better one.
+This algorithm does not have much practical use, however I enjoyed created my own compression algorithm and have learned from it so in the future I can make a better one.
