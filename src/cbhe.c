@@ -118,7 +118,7 @@ void CBHE_push_buffer(unsigned char *buffer, int depth, unsigned char c) {
 long CBHE_get_context_index(unsigned char *buffer, int depth) {
 	long index = 0;
 	for (int i = 0; i < depth; i++) {
-		index += buffer[i] << (8*sizeof(unsigned char));
+		index += buffer[i] << (8*i);
 	}
 	return index;
 }
@@ -171,8 +171,6 @@ CBHEHuffmanTree CBHE_generate_tree(int *counts, int depth, long tree_index) {
 	if (tree_count == 0) {
 		return NULL; // No unsigned characters occurred with the given context
 	}
-
-	printf("Tree Count: %d\n", tree_count);
 
 	while (tree_count > 1) {
 		int smallest_node_index = -1;
@@ -227,7 +225,6 @@ void CBHE_flatten_tree_helper(CBHEEncoding *encodings, CBHEHuffmanTree tree, int
 		encodings[encoding_index].exists = 1;
 		encodings[encoding_index].value = bit_pattern;
 		encodings[encoding_index].bit_count = bit_count;
-		printf("%c, %d, %d\n", tree->c, bit_pattern, bit_count);
 	}
 	else {
 		CBHE_flatten_tree_helper(encodings, tree->left, tree_index, (bit_pattern << 1) + 0, bit_count+1);

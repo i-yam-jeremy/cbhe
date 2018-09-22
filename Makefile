@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-Wall
+CFLAGS=-Wall -g
 EXECUTABLE=cbhe
 SOURCES=$(shell find src -name '*.c')
 OBJS=$(patsubst src/%.c, bin/%.o, $(SOURCES))

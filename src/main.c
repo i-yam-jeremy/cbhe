@@ -2,7 +2,8 @@
 
 int main(int argc, char **argv) {
 	
-	CBHE_compress("README.md", "out.cbhe", 4);
+	CBHE_compress("main.c", "out.cbhe", 2);
+
 
 	return 0;
 }
