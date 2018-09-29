@@ -2,7 +2,7 @@
 
 int main(int argc, char **argv) {
 	
-	CBHE_compress("main.c", "out.cbhe", 2);
+	CBHE_compress("src/main.c", "out.cbhe", 1);
 
 
 	return 0;

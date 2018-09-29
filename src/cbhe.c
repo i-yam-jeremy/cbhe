@@ -144,7 +144,7 @@ void CBHE_increment_count(int *counts, unsigned char *buffer, int depth) {
 int* CBHE_get_counts(FILE *input, int depth) {
 	unsigned char *buffer = (unsigned char*) calloc(depth, sizeof(unsigned char));
 	int *counts = (int*) calloc(CBHE_pow(CHAR_VALUE_COUNT, depth), sizeof(int));
-	
+
 	int c;
 	while ((c = fgetc(input)) != -1) {
 		CBHE_push_buffer(buffer, depth, c);
@@ -228,7 +228,7 @@ void CBHE_flatten_tree_helper(CBHEEncoding *encodings, CBHEHuffmanTree tree, int
 	}
 	else {
 		CBHE_flatten_tree_helper(encodings, tree->left, tree_index, (bit_pattern << 1) + 0, bit_count+1);
-		CBHE_flatten_tree_helper(encodings, tree->left, tree_index, (bit_pattern << 1) + 1, bit_count+1);
+		CBHE_flatten_tree_helper(encodings, tree->right, tree_index, (bit_pattern << 1) + 1, bit_count+1);
 	}
 }
 
@@ -294,7 +294,6 @@ void CBHE_compress(char *input_file_path, char *output_file_path, int depth) {
 	int *counts = CBHE_get_counts(input, depth);
 
 	CBHEHuffmanTree *trees = CBHE_generate_trees(counts, depth);
-
 
 	CBHEEncoding *encodings = CBHE_generate_encodings(trees, depth);
 	CBHE_free_huff_trees(trees, depth);
