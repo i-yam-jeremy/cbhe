@@ -280,6 +280,22 @@ void CBHE_encode(CBHEEncoding *encodings, int depth, FILE *input, FILE *output) 
 	free(output_bitstream);
 }
 
+void CBHE_write_header(int depth, FILE *output) {
+	fwrite("CBHE", sizeof(char), 4, output);
+	fwrite(&depth, sizeof(int), 1, output);
+}
+
+/*
+	Writes the counts of all characters in their given context to the output file.
+	This data is necessary to rebuild the Huffman trees upon decoding.
+	@param counts - the counts context array
+	@param depth - the depth of the context
+	@param output - the output file
+*/
+void CBHE_write_count_data(int *counts, int depth, FILE *output) {
+	fwrite(counts, sizeof(int), CBHE_pow(CHAR_VALUE_COUNT, depth), output);
+}
+
 /*
 	Compresses the specified file using Context-Based Huffman Encoding (CBHE)
 		and outputs the result in the output file
@@ -297,6 +313,10 @@ void CBHE_compress(char *input_file_path, char *output_file_path, int depth) {
 
 	CBHEEncoding *encodings = CBHE_generate_encodings(trees, depth);
 	CBHE_free_huff_trees(trees, depth);
+
+
+	CBHE_write_header(depth, output);
+	CBHE_write_count_data(counts, depth, output);
 
 	rewind(input);
 	CBHE_encode(encodings, depth, input, output);
