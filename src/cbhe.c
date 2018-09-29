@@ -8,7 +8,6 @@
 */
 #define CHAR_VALUE_COUNT 256
 
-
 long CBHE_pow(int n, int m); // TODO FIXME
 
 struct cbhe_huffman_tree {
@@ -69,6 +68,11 @@ struct cbhe_bitstream {
 
 typedef struct cbhe_bitstream* CBHEBitstream;
 
+/*
+	Creates a new bitstream around the given file
+	@param file - the file
+	@return - a bitstream
+*/
 CBHEBitstream CBHE_new_bitstream(FILE *file) {
 	CBHEBitstream bs = (CBHEBitstream) malloc(sizeof(struct cbhe_bitstream));
 	bs->file = file;
@@ -77,6 +81,10 @@ CBHEBitstream CBHE_new_bitstream(FILE *file) {
 	return bs;
 }
 
+/*
+	Flushes the bitstream (writes the unwritten buffered data to the file and clears the buffer)
+	@param bs - the bitstream
+*/
 void CBHE_flush_bitstream(CBHEBitstream bs) {
 	unsigned char b = bs->buffer << (8 - bs->buffer_bit_count); // align so first bit is at top (most significant) end of byte
 	fwrite(&b, sizeof(unsigned char), 1, bs->file);
@@ -154,7 +162,12 @@ int* CBHE_get_counts(FILE *input, int depth) {
 	return counts;
 }
 
-
+/*
+	Generates a single Huffman tree with the given index
+	@param counts - the context-based counts
+	@param depth - the depth of the context
+	@param tree_index - the index of the tree
+*/
 CBHEHuffmanTree CBHE_generate_tree(int *counts, int depth, long tree_index) {
 	CBHEHuffmanTree trees[CHAR_VALUE_COUNT] = {NULL};
 	
@@ -210,6 +223,12 @@ CBHEHuffmanTree CBHE_generate_tree(int *counts, int depth, long tree_index) {
 	return NULL; // should never be reached
 }
 
+/*
+	Generates Huffman trees for each context based on the counts for each context
+	@param counts - the counts for each context
+	@param depth - the depth of the context
+	@return - the Huffman trees
+*/
 CBHEHuffmanTree* CBHE_generate_trees(int *counts, int depth) {
 	int tree_count = CBHE_pow(CHAR_VALUE_COUNT, depth-1);
 	CBHEHuffmanTree *trees = (CBHEHuffmanTree*) malloc(sizeof(CBHEHuffmanTree)*tree_count);
@@ -219,6 +238,14 @@ CBHEHuffmanTree* CBHE_generate_trees(int *counts, int depth) {
 	return trees;
 }
 
+/*
+	A recursive helper function for CBHE_flatten_tree
+	@param encodings - the encodings buffer
+	@param tree - the tree to flatten
+	@param tree_index - the index of the tree
+	@param bit_pattern - the current bit pattern at this point in the recursion of the tree
+	@param bit_count - the bit count of the current bit pattern (the number of levels down you are in the tree)
+*/
 void CBHE_flatten_tree_helper(CBHEEncoding *encodings, CBHEHuffmanTree tree, int tree_index, long bit_pattern, int bit_count) {
 	if (tree->left == NULL && tree->right == NULL)	{
 		long encoding_index = (tree_index << 8) + tree->c;
@@ -232,10 +259,22 @@ void CBHE_flatten_tree_helper(CBHEEncoding *encodings, CBHEHuffmanTree tree, int
 	}
 }
 
+/*
+	Flattens a single tree and puts the resultant encodings into the given encodings buffer
+	@param encodings - the encodings buffer
+	@param trees - all the Huffman trees
+	@param tree_index - the index of the tree to flatten
+*/
 void CBHE_flatten_tree(CBHEEncoding *encodings, CBHEHuffmanTree *trees, int tree_index) {
 	CBHE_flatten_tree_helper(encodings, trees[tree_index], tree_index, 0, 0);
 }
 
+/*
+	Generate encodings based on the given Huffman trees
+	@param trees - the Huffman trees for each context
+	@param depth - the depth of the context
+	@return - the encodings
+*/
 CBHEEncoding* CBHE_generate_encodings(CBHEHuffmanTree *trees, int depth) {
 	CBHEEncoding *encodings = (CBHEEncoding*) calloc(CBHE_pow(CHAR_VALUE_COUNT, depth), sizeof(CBHEEncoding));
 
@@ -248,6 +287,11 @@ CBHEEncoding* CBHE_generate_encodings(CBHEHuffmanTree *trees, int depth) {
 	return encodings;
 }
 
+/*
+	Writes a single bit to the output bitstream
+	@param bs - the output bitstream
+	@param bit - the bit to write (must be 0 or 1)
+*/
 void CBHE_write_bit(CBHEBitstream bs, int bit) {
 	bs->buffer = (bs->buffer << 1) + bit;
 	bs->buffer_bit_count++;
@@ -259,12 +303,25 @@ void CBHE_write_bit(CBHEBitstream bs, int bit) {
 	}
 }
 
+/*
+	Writes a specific encoding bit pattern to the file
+	@param output_bitstream - the output bitstream
+	@param encoding - the encoding to write
+*/
 void CBHE_write_encoding(CBHEBitstream output_bitstream, CBHEEncoding encoding) {
 	for (int i = encoding.bit_count-1; i >= 0; i--) {
 		CBHE_write_bit(output_bitstream, (encoding.value >> i) & 0x1);
 	}
 }
 
+/*
+	Encodes the given input file using the given encodings and outputs the data
+		to the output file
+	@param encodings - the encodings context array
+	@param depth - the depth of the context
+	@param input - the input file
+	@param output - the output file
+*/
 void CBHE_encode(CBHEEncoding *encodings, int depth, FILE *input, FILE *output) {
 	unsigned char *buffer = (unsigned char*) calloc(depth, sizeof(unsigned char));
 	CBHEBitstream output_bitstream = CBHE_new_bitstream(output);
@@ -280,6 +337,11 @@ void CBHE_encode(CBHEEncoding *encodings, int depth, FILE *input, FILE *output) 
 	free(output_bitstream);
 }
 
+/*
+	Writes the header data to the output file
+	@param depth - the depth of the context
+	@param output - the output file
+*/
 void CBHE_write_header(int depth, FILE *output) {
 	fwrite("CBHE", sizeof(char), 4, output);
 	fwrite(&depth, sizeof(int), 1, output);
