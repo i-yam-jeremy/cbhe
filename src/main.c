@@ -18,6 +18,10 @@ void usage() {
 
 int main(int argc, char **argv) {
 
+	CBHE_compress("src/main.c", "out.cbhe", 2);
+	CBHE_decompress("out.cbhe", "test.c");
+	return 0;
+
 	if (argc == 5) {
 		char *flag = argv[1];
 		if (strcmp(flag, "-c") == 0 || strcmp(flag, "--compress") == 0) {

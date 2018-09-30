@@ -105,8 +105,6 @@ void CBHE_decode_file(CBHEHuffmanTree *trees, int depth, long decompressed_size,
 	int bit;
 	long bytes_decoded = 0;
 	while ((bit = CBHE_read_bit(input_bitstream)) != -1 && bytes_decoded < decompressed_size) {
-		printf("bit: %d\n", bit);
-		printf("tree: %ld\n", current_tree); 
 		while (current_tree->left == NULL && current_tree->right == NULL) { // reached leaf node
 			fwrite(&current_tree->c, sizeof(char), 1, output);
 			CBHE_push_buffer(buffer, depth-1, current_tree->c);
