@@ -105,7 +105,7 @@ void CBHE_decode_file(CBHEHuffmanTree *trees, int depth, long decompressed_size,
 	int bit;
 	long bytes_decoded = 0;
 	while ((bit = CBHE_read_bit(input_bitstream)) != -1 && bytes_decoded < decompressed_size) {
-		while (current_tree->left == NULL && current_tree->right == NULL) { // reached leaf node
+		while (current_tree->left == NULL && current_tree->right == NULL && bytes_decoded < decompressed_size) { // reached leaf node
 			fwrite(&current_tree->c, sizeof(char), 1, output);
 			CBHE_push_buffer(buffer, depth-1, current_tree->c);
 			long tree_index = CBHE_get_context_index(buffer, depth-1);
@@ -122,7 +122,9 @@ void CBHE_decode_file(CBHEHuffmanTree *trees, int depth, long decompressed_size,
 
 	}
 
-	fwrite(&current_tree->c, sizeof(char), 1, output); // write the last character
+	if (current_tree->left == NULL && current_tree->right == NULL) {
+		fwrite(&current_tree->c, sizeof(char), 1, output); // write the last character
+	}
 
 	free(input_bitstream);
 }

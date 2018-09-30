@@ -50,7 +50,7 @@ int* CBHE_get_counts(FILE *input, int depth, long *decompressed_size) {
 	@param decompressed_size - the decompressed size of the file
 	@param output - the output file
 */
-void CBHE_write_header(int depth, int decompressed_size, FILE *output) {
+void CBHE_write_header(int depth, long decompressed_size, FILE *output) {
 	fwrite("CBHE", sizeof(char), 4, output);
 	fwrite(&depth, sizeof(int), 1, output);
 	fwrite(&decompressed_size, sizeof(long), 1, output);
@@ -67,7 +67,7 @@ void CBHE_verify_header(FILE *input) {
 	fread(buffer, sizeof(char), 4, input);
 	
 	if (strcmp(buffer, "CBHE") != 0) {
-		fprintf(stderr, "Invalid header. File did not start with \"CBHE\"");
+		fprintf(stderr, "Invalid header. File did not start with \"CBHE\"\n");
 		exit(1);
 	}
 }
@@ -128,7 +128,6 @@ void CBHE_compress(char *input_file_path, char *output_file_path, int depth) {
 	CBHEEncoding *encodings = CBHE_generate_encodings(trees, depth);
 	CBHE_free_huff_trees(trees, depth);
 
-
 	CBHE_write_header(depth, decompressed_size, output);
 	CBHE_write_count_data(counts, depth, output);
 
@@ -154,7 +153,7 @@ void CBHE_decompress(char *input_file_path, char *output_file_path) {
 	int depth;
 	long decompressed_size;
 	CBHE_read_header(input, &depth, &decompressed_size);
-
+	
 	int *counts = CBHE_read_count_data(input, depth);
 
 	CBHEHuffmanTree *trees = CBHE_generate_trees(counts, depth);
