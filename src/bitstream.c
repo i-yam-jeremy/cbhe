@@ -41,3 +41,23 @@ void CBHE_write_bit(CBHEBitstream bs, int bit) {
 		bs->buffer_bit_count = 0;
 	}
 }
+
+/*
+	Writes a single bit to the input bitstream
+	@param bs - the input bitstream
+	@return - the bit that was read (0 or 1, OR -1 if EOF)
+*/
+int CBHE_read_bit(CBHEBitstream bs) {
+	if (bs->buffer_bit_count == 0) {
+		int bytes_read = fread(&bs->buffer, sizeof(unsigned char), 1, bs->file);
+		if (bytes_read == 0) {
+			return -1;
+		}
+		bs->buffer_bit_count = 8;
+	}
+
+	int bit = (bs->buffer >> (bs->buffer_bit_count-1)) & 0x1;
+	bs->buffer_bit_count--;
+
+	return bit;
+}

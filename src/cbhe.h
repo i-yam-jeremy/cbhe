@@ -8,7 +8,7 @@
 	@param output_file_path - the path to the output file
 	@param depth - the depth of the context to use
 */
-void CBHE_compress(char *input_file, char *output_file, int depth);
+void CBHE_compress(char *input_file_path, char *output_file_path, int depth);
 
 /*
 	Decompresses the specified file using Context-Based Huffman Encoding (CBHE)
@@ -16,6 +16,6 @@ void CBHE_compress(char *input_file, char *output_file, int depth);
 	@param input_file_path - the path to the input file
 	@param output_file_path - the path to the output file
 */
-void CBHE_decompress(char *input_file, char *output_file);
+void CBHE_decompress(char *input_file_path, char *output_file_path);
 
 #endif

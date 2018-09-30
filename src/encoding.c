@@ -87,3 +87,44 @@ void CBHE_encode_file(CBHEEncoding *encodings, int depth, FILE *input, FILE *out
 	CBHE_flush_bitstream(output_bitstream);
 	free(output_bitstream);
 }
+
+/*
+	Decodes the given input file using the given encodings and outputs the data
+		to the output file
+	@param trees - the Huffman tree for each context
+	@param depth - the depth of the context
+	@param decompressed_size - the size of the decompressed file
+	@param input - the input file
+	@param output - the output file
+*/
+void CBHE_decode_file(CBHEHuffmanTree *trees, int depth, long decompressed_size, FILE *input, FILE *output) {
+	unsigned char *buffer = (unsigned char*) calloc(depth-1, sizeof(unsigned char));
+	CBHEBitstream input_bitstream = CBHE_new_bitstream(input);
+	
+	CBHEHuffmanTree current_tree = trees[0]; // index 0 because the buffer starts with zeros
+	int bit;
+	long bytes_decoded = 0;
+	while ((bit = CBHE_read_bit(input_bitstream)) != -1 && bytes_decoded < decompressed_size) {
+		printf("bit: %d\n", bit);
+		printf("tree: %ld\n", current_tree); 
+		while (current_tree->left == NULL && current_tree->right == NULL) { // reached leaf node
+			fwrite(&current_tree->c, sizeof(char), 1, output);
+			CBHE_push_buffer(buffer, depth-1, current_tree->c);
+			long tree_index = CBHE_get_context_index(buffer, depth-1);
+			current_tree = trees[tree_index];
+			bytes_decoded++;
+		}
+		
+		if (bit) {
+			current_tree = current_tree->right;
+		}
+		else {
+			current_tree = current_tree->left;
+		}
+
+	}
+
+	fwrite(&current_tree->c, sizeof(char), 1, output); // write the last character
+
+	free(input_bitstream);
+}

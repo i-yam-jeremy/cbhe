@@ -34,4 +34,15 @@ CBHEEncoding* CBHE_generate_encodings(CBHEHuffmanTree *trees, int depth);
 */
 void CBHE_encode_file(CBHEEncoding *encodings, int depth, FILE *input, FILE *output);
 
+/*
+	Decodes the given input file using the given encodings and outputs the data
+		to the output file
+	@param trees - the Huffman tree for each context
+	@param depth - the depth of the context
+	@param decompressed_size - the size of the decompressed file
+	@param input - the input file
+	@param output - the output file
+*/
+void CBHE_decode_file(CBHEHuffmanTree *trees, int depth, long decompressed_size, FILE *input, FILE *output);
+
 #endif

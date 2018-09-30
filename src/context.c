@@ -20,7 +20,7 @@ void CBHE_push_buffer(unsigned char *buffer, int depth, unsigned char c) {
 long CBHE_get_context_index(unsigned char *buffer, int depth) {
 	long index = 0;
 	for (int i = 0; i < depth; i++) {
-		index += buffer[i] << (8*i);
+		index = (index << 8) + buffer[i];
 	}
 	return index;
 }

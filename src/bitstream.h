@@ -37,4 +37,11 @@ void CBHE_flush_bitstream(CBHEBitstream bs);
 */
 void CBHE_write_bit(CBHEBitstream bs, int bit);
 
+/*
+	Writes a single bit to the input bitstream
+	@param bs - the input bitstream
+	@return - the bit that was read (0 or 1, OR -1 if EOF)
+*/
+int CBHE_read_bit(CBHEBitstream bs);
+
 #endif
