@@ -92,7 +92,23 @@ void CBHE_read_header(FILE* input, int *depth, long *decompressed_size) {
 	@param output - the output file
 */
 void CBHE_write_count_data(int *counts, int depth, FILE *output) {
-	fwrite(counts, sizeof(int), CBHE_pow(CHAR_VALUE_COUNT, depth), output);
+	long counts_length = CBHE_pow(CHAR_VALUE_COUNT, depth);
+	long nonzero_counts = 0;
+
+	for (long i = 0; i < counts_length; i++) {
+		if (counts[i] != 0) {
+			nonzero_counts++;
+		}
+	}
+
+	fwrite(&nonzero_counts, sizeof(long), 1, output);
+
+	for (long i = 0; i < counts_length; i++) {
+		if (counts[i] != 0) {
+			fwrite(&i, sizeof(char), depth, output);
+			fwrite(&counts[i], sizeof(int), 1, output);
+		}
+	}
 }
 
 /*
@@ -103,8 +119,19 @@ void CBHE_write_count_data(int *counts, int depth, FILE *output) {
 */
 int* CBHE_read_count_data(FILE *input, int depth) {
 	long counts_buffer_length = CBHE_pow(CHAR_VALUE_COUNT, depth);
-	int *counts = (int*) malloc(sizeof(int)*counts_buffer_length);
-	fread(counts, sizeof(int), counts_buffer_length, input);
+	int *counts = (int*) calloc(counts_buffer_length, sizeof(int));
+	
+	long nonzero_counts;
+	fread(&nonzero_counts, sizeof(long), 1, input);
+
+	for (long i = 0; i < nonzero_counts; i++) {
+		long count_index = 0;
+		fread(&count_index, sizeof(char), depth, input);
+		int count;
+		fread(&count, sizeof(int), 1, input);
+		counts[count_index] = count;
+	}
+
 	return counts;
 }
 
